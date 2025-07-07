@@ -1,6 +1,16 @@
 # EAFC Draft Application
 
-A modern web application for organizing EA FC (FIFA) player drafts with real-time updates, tournament management, and comprehensive player data.
+A modern web application for organizing EA FC (FIFA) player drafts with real-time updates, tournament management, and comprehensive player data. Try now at https://fifadraft.kak.dev
+
+
+https://github.com/user-attachments/assets/a660d31d-2fc8-4846-9aa7-08b1ff5f12cb
+
+
+https://github.com/user-attachments/assets/911c3090-2a66-4704-8b4b-e4b8c87f33f4
+
+
+https://github.com/user-attachments/assets/aaf14e05-27dd-4436-b592-9f5cf9b2f47e
+
 
 ## 🎯 Main Features
 
