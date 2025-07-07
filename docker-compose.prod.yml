@@ -1,0 +1,40 @@
+services:
+  # Reverse proxy with Caddy
+  caddy:
+    image: caddy:alpine
+    container_name: eafc-draft-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - server
+      - client
+
+  # Frontend
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.prod
+    container_name: eafc-draft-client
+    restart: unless-stopped
+
+  # Backend server
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: eafc-draft-server
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SERVER_ADDRESS: :8080
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN}
+
+volumes:
+  caddy_data:
+  caddy_config:
