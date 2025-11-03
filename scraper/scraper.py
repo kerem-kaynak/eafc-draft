@@ -1,11 +1,12 @@
 """
-EAFC 25 Player Data Scraper
+EAFC 26 Player Data Scraper
 Fetches all player data from EA's API and exports to CSV
 """
 
 import asyncio
 import csv
 import json
+import re
 from typing import Dict, List, Any, Optional
 import httpx
 from pathlib import Path
@@ -21,16 +22,41 @@ class EAFCPlayerScraper:
             'origin': 'https://www.ea.com',
             'priority': 'u=1, i',
             'referer': 'https://www.ea.com/',
-            'sec-ch-ua': '"Chromium";v="137", "Not/A)Brand";v="24"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"macOS"',
+            'sec-ch-ua': '"Chromium";v="141", "Not?A_Brand";v="8"',
+            'sec-ch-ua-mobile': '?1',
+            'sec-ch-ua-platform': '"Android"',
             'sec-fetch-dest': 'empty',
             'sec-fetch-mode': 'cors',
             'sec-fetch-site': 'same-site',
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
-            'x-feature': '{"enable_age_gate":true,"enable_age_gate_refactor":false,"enable_college_football_ratings":false,"enable_currency":false,"enable_events_page":true,"enable_fc_mobile_game_languages":true,"enable_glacier":false,"enable_im_resize_query_param":true,"enable_language_redirection":true,"enable_legal_disclaimer_page":false,"enable_mobile_download_flow_optimization":false,"enable_newsletter":true,"enable_newsletter_with_incentive":false,"enable_player_stats":false,"enable_portal":false,"enable_spotlight_carousel":false,"enable_translations_api_route":false,"enable_ugc_page":false,"enable_ugx":false}'
+            'user-agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36',
+                'x-feature': '{"disable_share_image":false,"drop-8104":false,"drop-8334":false,"enable_access_site":true,"enable_age_gate":true,"enable_age_gate_refactor":true,"enable_bf2042_glacier_theme":false,"enable_checkout_page":true,"enable_college_football_ratings":true,"enable_currency":false,"enable_events_page":true,"enable_franchise_hub":false,"enable_franchise_newsletter":true,"enable_im_resize_query_param":true,"enable_language_redirection":true,"enable_legal_disclaimer_page":false,"enable_multimedia_consent":true,"enable_newsletter_with_incentive":true,"enable_next_ratings_release":true,"enable_non_mobile_download_flow_optimization":true,"enable_page_level_theming":true,"enable_player_tag":true,"enable_portal":true,"enable_portal_filter":false,"enable_portal_maps_rotation":true,"enable_postlaunch_webstore_focus":true,"enable_postlaunch_webstore_image_link_ab_test":false,"enable_postlaunch_webstore_pdp_promotion":true,"enable_ratings_up_down_vote":false,"enable_showcase_edition":true,"enable_spotlight_carousel":true,"enable_translations_api_route":false,"enable_ugc_page":true,"enable_ugx":false}'
         }
         self.players_data = []
+
+    def convert_fc25_to_fc26_urls(self, avatar_url: Optional[str], shield_url: Optional[str]) -> tuple[Optional[str], Optional[str]]:
+        """Convert FC25 URLs to FC26 format
+        
+        Avatar: FC25/full/player-portraits/p{id}.png -> FC26/components/players/p{id}.webp
+        Shield: FC25/full/player-shields/en/{id}.png -> FC26/components/items/{id}_en.webp
+        """
+        converted_avatar = None
+        converted_shield = None
+        
+        if avatar_url:
+            # Extract player ID from avatar URL (e.g., p209331)
+            match = re.search(r'p(\d+)\.png', avatar_url)
+            if match:
+                player_id = match.group(0).replace('.png', '')  # Gets 'p209331'
+                converted_avatar = f"https://ratings-images-prod.pulse.ea.com/FC26/components/players/{player_id}.webp"
+        
+        if shield_url:
+            # Extract player ID from shield URL (e.g., 209331)
+            match = re.search(r'/(\d+)\.png', shield_url)
+            if match:
+                player_id = match.group(1)  # Gets '209331'
+                converted_shield = f"https://ratings-images-prod.pulse.ea.com/FC26/components/items/{player_id}_en.webp"
+        
+        return converted_avatar, converted_shield
 
     async def fetch_page(self, client: httpx.AsyncClient, offset: int = 0, limit: int = 100) -> Optional[Dict]:
         """Fetch a single page of player data"""
@@ -54,6 +80,12 @@ class EAFCPlayerScraper:
 
     def extract_player_data(self, player: Dict[str, Any]) -> Dict[str, Any]:
         """Extract and flatten relevant player data"""
+        # Convert FC25 URLs to FC26 format
+        avatar_url, shield_url = self.convert_fc25_to_fc26_urls(
+            player.get('avatarUrl'),
+            player.get('shieldUrl')
+        )
+        
         extracted = {
             'id': player.get('id'),
             'overall_rating': player.get('overallRating'),
@@ -64,8 +96,8 @@ class EAFCPlayerScraper:
             'weak_foot': player.get('weakFootAbility'),
             'preferred_foot': player.get('preferredFoot'),
             'league_name': player.get('leagueName'),
-            'avatar_url': player.get('avatarUrl'),
-            'shield_url': player.get('shieldUrl'),
+            'avatar_url': avatar_url,
+            'shield_url': shield_url,
         }
 
         # Extract alternate positions
